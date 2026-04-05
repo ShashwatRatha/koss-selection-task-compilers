@@ -1,0 +1,105 @@
+<program>   ::= <stmts>
+<stmts>     ::= <stmt> <stmts> | ε
+
+; ── Statements ─────────────────────────────────────────────────────────────
+;
+; An assignment is only recognised at the statement level (not inside an
+; expression), so chained assignment (a = b = 5) is not supported.
+
+<stmt>      ::= "show" | IDENT <assign_op> <expr>
+              | <expr>
+
+<assign_op> ::= "=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>="
+
+<expr>      ::= <logic_or>
+
+; right-associative (right-recursive)
+<logic_or>  ::= <logic_and>
+              | <logic_and> "||" <logic_or>
+
+; right-associative (right-recursive)
+<logic_and> ::= <bit_or>
+              | <bit_or> "&&" <logic_and>
+
+; right-associative (right-recursive)
+<bit_or>    ::= <bit_xor>
+              | <bit_xor> "|" <bit_or>
+
+; right-associative (right-recursive)
+<bit_xor>   ::= <bit_and>
+              | <bit_and> "^" <bit_xor>
+
+; right-associative (right-recursive)
+<bit_and>   ::= <equality>
+              | <equality> "&" <bit_and>
+
+; right-associative (right-recursive)
+<equality>  ::= <shift>
+              | <shift> "==" <equality>
+              | <shift> "!=" <equality>
+
+; left-associative (iterative while-loop)
+<shift>     ::= <additive>
+              | <shift> "<<" <additive>
+              | <shift> ">>" <additive>
+
+; left-associative (iterative while-loop)
+<additive>  ::= <term>
+              | <additive> "+" <term>
+              | <additive> "-" <term>
+
+; left-associative (iterative while-loop)
+<term>      ::= <unary>
+              | <term> "*" <unary>
+              | <term> "/" <unary>
+              | <term> "%" <unary>
+
+; right-associative (right-recursive)
+; ++/-- are only legal on a variable (lvalue); applying to a literal is a
+; parse error (had_error is set and NULL is returned)
+<unary>     ::= <postfix>
+              | "-"  <unary>
+              | "!"  <unary>
+              | "++" <unary>
+              | "--" <unary>
+
+<postfix>   ::= <primary>
+              | <primary> "++"
+              | <primary> "--"
+
+<primary>   ::= NUMBER
+              | IDENT
+              | "(" <expr> ")"
+
+; ── Lexical rules ──────────────────────────────────────────────────────────
+
+NUMBER      ::= DIGIT { DIGIT }
+IDENT       ::= IDENT_START { IDENT_CHAR }
+IDENT_START ::= [a-zA-Z_]
+IDENT_CHAR  ::= [a-zA-Z0-9_]
+DIGIT       ::= [0-9]
+
+; ── Operator precedence table (tightest to weakest) ───────────────────────
+;
+;  Level  Operators            Associativity
+;  ─────  ───────────────────  ─────────────
+;    1    - ! ++ -- (prefix)   right (unary)
+;         ++ -- (postfix)      left  (postfix)
+;    2    * / %                left
+;    3    + -                  left
+;    4    << >>                left
+;    5    == !=                right
+;    6    &                    right
+;    7    ^                    right
+;    8    |                    right
+;    9    &&                   right
+;   10    ||                   right (weakest binary)
+;
+; ── Unsupported ────────────────────────────────────────────────────────────
+;
+; The following are intentionally absent from the language:
+;   < <= > >=    (no relational comparison operators)
+;   ~            (no bitwise NOT; use XOR with a mask instead)
+;   %=           (no modulo-assign)
+;   hex/octal literals (only decimal integers)
+;   strings, floats, arrays, control flow (if/while/for)
