@@ -1,0 +1,1 @@
+gcc src/*.c -o alg || clang src/*.c -o alg
